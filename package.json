@@ -3,7 +3,7 @@
 	"displayName": "markdownlint",
 	"description": "Markdown linting and style checking for Visual Studio Code",
 	"icon": "images/markdownlint-128.png",
-	"version": "0.56.0",
+	"version": "0.59.0",
 	"author": "David Anson (https://dlaa.me/)",
 	"publisher": "DavidAnson",
 	"sponsor": {
@@ -41,24 +41,24 @@
 	"main": "./bundle",
 	"browser": "./bundle.web",
 	"dependencies": {
-		"markdownlint-cli2": "0.14.0"
+		"markdownlint-cli2": "0.17.2"
 	},
 	"devDependencies": {
-		"@eslint/js": "9.10.0",
-		"@stylistic/eslint-plugin": "2.8.0",
+		"@eslint/js": "9.20.0",
+		"@stylistic/eslint-plugin": "3.1.0",
 		"@types/vscode": "1.75.0",
 		"@vscode/test-electron": "2.4.1",
+		"@vscode/vsce": "3.2.2",
 		"cpy-cli": "5.0.0",
-		"eslint": "9.10.0",
-		"eslint-plugin-n": "17.10.2",
-		"eslint-plugin-unicorn": "55.0.0",
+		"eslint": "9.20.1",
+		"eslint-plugin-n": "17.15.1",
+		"eslint-plugin-unicorn": "56.0.1",
 		"path-browserify": "1.0.1",
 		"stream-browserify": "3.0.0",
-		"terser-webpack-plugin": "5.3.10",
+		"terser-webpack-plugin": "5.3.11",
 		"util": "0.12.5",
-		"vsce": "2.15.0",
-		"webpack": "5.94.0",
-		"webpack-cli": "5.1.4"
+		"webpack": "5.98.0",
+		"webpack-cli": "6.0.1"
 	},
 	"keywords": [
 		"markdown",
@@ -172,6 +172,19 @@
 			"title": "markdownlint",
 			"type": "object",
 			"properties": {
+				"markdownlint.config": {
+					"description": "markdownlint configuration object",
+					"scope": "resource",
+					"type": "object",
+					"$ref": "https://raw.githubusercontent.com/DavidAnson/markdownlint/v0.37.4/schema/markdownlint-config-schema.json",
+					"default": {}
+				},
+				"markdownlint.configFile": {
+					"description": "Path to a configuration file that defines the base configuration",
+					"scope": "resource",
+					"type": "string",
+					"default": null
+				},
 				"markdownlint.customRules": {
 					"description": "Array of paths for custom rules to include when linting",
 					"scope": "resource",
@@ -199,10 +212,11 @@
 					},
 					"default": [
 						"**/*.{md,mkd,mdwn,mdown,markdown,markdn,mdtxt,mdtext,workbook}",
+						"!**/*.code-search",
 						"!**/bower_components",
 						"!**/node_modules",
-						"!**/vendor",
-						"!**/.git"
+						"!**/.git",
+						"!**/vendor"
 					]
 				},
 				"markdownlint.run": {
@@ -214,13 +228,6 @@
 						"onType"
 					],
 					"default": "onType"
-				},
-				"markdownlint.config": {
-					"description": "markdownlint config object",
-					"scope": "resource",
-					"type": "object",
-					"$ref": "https://raw.githubusercontent.com/DavidAnson/markdownlint/v0.35.0/schema/markdownlint-config-schema.json",
-					"default": {}
 				}
 			}
 		}

@@ -2,15 +2,18 @@
 
 "use strict";
 
-// Minimal requires (requires that may not be needed are inlined to reduce startup cost)
-const vscode = require("vscode");
-const os = require("node:os");
-const path = require("node:path");
-const { promisify } = require("node:util");
-const { "main": markdownlintCli2 } = require("markdownlint-cli2");
-const { readConfig } = require("markdownlint-cli2/markdownlint").promises;
+// Minimal imports (requires that may not be needed are inlined to reduce startup cost)
+import vscode from "vscode";
+import os from "node:os";
+import path from "node:path";
+import { promisify } from "node:util";
+import { "main" as markdownlintCli2 } from "markdownlint-cli2";
+import { applyFix, applyFixes } from "markdownlint-cli2/markdownlint";
+import { readConfig } from "markdownlint-cli2/markdownlint/promise";
 // eslint-disable-next-line unicorn/no-keyword-prefix
-const { applyFix, applyFixes, expandTildePath, newLineRe } = require("markdownlint-cli2/markdownlint/helpers");
+import helpers from "markdownlint-cli2/markdownlint/helpers";
+const { expandTildePath, newLineRe } = helpers;
+import parsers from "markdownlint-cli2/parsers";
 
 // Constants
 const extensionDisplayName = "markdownlint";
@@ -78,6 +81,7 @@ const clickForConfigureUrl = "https://github.com/DavidAnson/vscode-markdownlint#
 const errorExceptionPrefix = "Exception while linting with markdownlint-cli2:\n";
 const openCommand = "vscode.open";
 const sectionConfig = "config";
+const sectionConfigFile = "configFile";
 const sectionCustomRules = "customRules";
 const sectionFocusMode = "focusMode";
 const sectionLintWorkspaceGlobs = "lintWorkspaceGlobs";
@@ -346,8 +350,7 @@ async function getConfig (fs, configuration, uri) {
 		expanded = expanded.replace(/\${workspaceFolder}/g, workspaceFolderFsPath);
 		const extendPath = path.resolve(extendBase, expanded);
 		try {
-			const configParsers = require("markdownlint-cli2/parsers");
-			const extendConfig = await readConfig(extendPath, configParsers, fs);
+			const extendConfig = await readConfig(extendPath, parsers, fs);
 			userWorkspaceConfig = {
 				...extendConfig,
 				...userWorkspaceConfig
@@ -360,6 +363,14 @@ async function getConfig (fs, configuration, uri) {
 		...defaultConfig,
 		...userWorkspaceConfig
 	};
+}
+
+// Returns an array of args entries for the config path for the user/workspace
+function getConfigFileArgs (configuration) {
+	const configFile = configuration.get(sectionConfigFile);
+	/** @type {string[]} */
+	const configFileArgs = (configFile?.length > 0) ? [ "--config", expandTildePath(configFile, os) ] : [];
+	return configFileArgs;
 }
 
 // Returns custom rule configuration for user/workspace
@@ -401,8 +412,8 @@ function getOptionsOverride () {
 	};
 }
 
-// Gets the value of the noRequire parameter to markdownlint-cli2
-function getNoRequire (scheme) {
+// Gets the value of the noImport parameter to markdownlint-cli2
+function getNoImport (scheme) {
 	const isTrusted = vscode.workspace.isTrusted;
 	const isSchemeFile = (scheme === schemeFile);
 	const isDesktop = Boolean(os && os.platform && os.platform());
@@ -426,7 +437,7 @@ async function markdownlintWrapper (document) {
 		posixPath(workspaceFolderUri.fsPath);
 	const argv = independentDocument ?
 		[] :
-		[ `:${name}` ];
+		[ `:${name}`, ...getConfigFileArgs(configuration) ];
 	const contents = independentDocument ?
 		"nonFileContents" :
 		"fileContents";
@@ -443,7 +454,7 @@ async function markdownlintWrapper (document) {
 			[name]: document.getText()
 		},
 		"noGlobs": true,
-		"noRequire": getNoRequire(scheme),
+		"noImport": getNoImport(scheme),
 		"optionsDefault": await getOptionsDefault(fs, configuration, config),
 		"optionsOverride": {
 			...getOptionsOverride(),
@@ -495,7 +506,7 @@ function lintWorkspace (logString) {
 						"directory": posixPath(workspaceFolderUri.fsPath),
 						"logMessage": logString,
 						"logError": logString,
-						"noRequire": getNoRequire(workspaceFolderUri.scheme),
+						"noImport": getNoImport(workspaceFolderUri.scheme),
 						optionsDefault,
 						"optionsOverride": getOptionsOverride()
 					};
@@ -974,7 +985,7 @@ function didChangeWorkspaceFolders (changes) {
 	}
 }
 
-function activate (context) {
+export function activate (context) {
 	// Create OutputChannel
 	outputChannel = vscode.window.createOutputChannel(extensionDisplayName);
 	context.subscriptions.push(outputChannel);
@@ -1085,5 +1096,3 @@ function activate (context) {
 	// Lint all visible documents
 	setTimeout(clearDiagnosticsAndLintVisibleFiles, throttleDuration);
 }
-
-module.exports.activate = activate;

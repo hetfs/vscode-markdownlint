@@ -10,14 +10,7 @@ const TerserPlugin = require("terser-webpack-plugin");
 const nodeModulePrefixRe = /^node:/u;
 const baseConfig = {
 	"target": "node",
-	"entry": "./extension.js",
-	"module": {
-		"rules": [
-			{
-				"test": /markdownlint-cli2.js$/
-			}
-		]
-	},
+	"entry": "./extension.mjs",
 	"output": {
 		"asyncChunks": false,
 		"path": __dirname,
@@ -66,11 +59,18 @@ const config = [
 		},
 		"plugins": [
 			...baseConfig.plugins,
-			// Intercept "node:stream/promises" lacking a browserify entry
+			// Intercept "markdown-it" to provide empty implementation
 			new webpack.NormalModuleReplacementPlugin(
-				/^stream\/promises$/u,
+				/^markdown-it$/u,
 				(resource) => {
-					resource.request = require.resolve("./webworker/stream-promises.js");
+					resource.request = require.resolve("./webworker/module-empty.js");
+				}
+			),
+			// Intercept "node:stream/consumers" and "node:stream/promises" lacking a browserify entry
+			new webpack.NormalModuleReplacementPlugin(
+				/^stream\/(?:consumers|promises)$/u,
+				(resource) => {
+					resource.request = require.resolve("./webworker/module-empty.js");
 				}
 			),
 			// Intercept existing "unicorn-magic" package to provide missing import
@@ -86,6 +86,7 @@ const config = [
 			})
 		],
 		"resolve": {
+			"conditionNames": [ "markdownlint-imports-node", "..." ],
 			"fallback": {
 				"fs": false,
 				"os": require.resolve("./webworker/os-stub.js"),
@@ -93,7 +94,7 @@ const config = [
 				"process": require.resolve("./webworker/process-stub.js"),
 				"process-wrapper": require.resolve("./webworker/process-stub.js"),
 				"stream": require.resolve("stream-browserify"),
-				"url": require.resolve("./webworker/url-stub.js"),
+				"url": require.resolve("./webworker/module-empty.js"),
 				"util": require.resolve("util")
 			}
 		}
